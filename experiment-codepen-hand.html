@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Mouse-Controlled Image Rotation</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: #000;
+        min-height: 100vh;
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        padding: 0;
+        margin: 0;
+        overflow: hidden;
+      }
+
+      .container {
+        background: #000;
+        width: 100vw;
+        height: 100vh;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .viewer-container {
+        position: relative;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100vw;
+        height: 100vh;
+        background: #000;
+        overflow: hidden;
+        cursor: grab;
+        user-select: none;
+      }
+
+      .viewer-container:active {
+        cursor: grabbing;
+      }
+
+      .image-viewer {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .rotating-image {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+        transition: opacity 0.5s ease-in-out;
+        opacity: 0;
+      }
+
+      .rotating-image.active {
+        opacity: 1;
+      }
+
+      .static-overlay {
+        position: absolute;
+        max-width: 40%;
+        max-height: 40%;
+        width: auto;
+        height: auto;
+        object-fit: contain;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 10;
+        pointer-events: none;
+        transition: opacity 0.5s ease-in-out;
+        opacity: 0;
+      }
+
+      .static-overlay.active-overlay {
+        opacity: 1;
+      }
+
+      .placeholder {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 1.2rem;
+        gap: 15px;
+        text-align: center;
+      }
+
+      .placeholder-icon {
+        font-size: 3rem;
+        opacity: 0.5;
+      }
+
+      .loading {
+        opacity: 0.5;
+        pointer-events: none;
+      }
+
+      .frame-counter {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 5px 10px;
+        border-radius: 15px;
+        font-size: 0.8rem;
+        font-weight: bold;
+        z-index: 20;
+      }
+
+      @media (max-width: 768px) {
+        body {
+          overflow: hidden;
+        }
+        
+        .static-overlay {
+          max-width: 50%;
+          max-height: 50%;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="viewer-container" id="viewerContainer">
+        <div class="placeholder">
+          <div class="placeholder-icon">🖼️</div>
+          <div>Loading animation sequence...</div>
+          <small>Move your mouse left/right to rotate through frames</small>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      let images = [];
+      let overlayImages = [];
+      let currentImageIndex = 0;
+      let mouseX = 0;
+      let lastMouseX = 0;
+      let sensitivity = 1;
+      let smoothing = 6;
+      let isMouseInViewer = false;
+      let frameBuffer = [];
+
+      const viewerContainer = document.getElementById("viewerContainer");
+
+      // Mouse tracking
+      viewerContainer.addEventListener("mouseenter", () => {
+        isMouseInViewer = true;
+      });
+
+      viewerContainer.addEventListener("mouseleave", () => {
+        isMouseInViewer = false;
+      });
+
+      viewerContainer.addEventListener("mousemove", (e) => {
+        if (!isMouseInViewer || images.length === 0) return;
+
+        const rect = viewerContainer.getBoundingClientRect();
+        const relativeX = (e.clientX - rect.left) / rect.width;
+
+        // Calculate target frame based on mouse position
+        const targetFrame = Math.floor(relativeX * images.length);
+        const clampedFrame = Math.max(
+          0,
+          Math.min(images.length - 1, targetFrame)
+        );
+
+        // Apply smoothing
+        frameBuffer.push(clampedFrame);
+        if (frameBuffer.length > smoothing) {
+          frameBuffer.shift();
+        }
+
+        // Calculate average frame
+        const avgFrame = Math.round(
+          frameBuffer.reduce((a, b) => a + b, 0) / frameBuffer.length
+        );
+
+        if (avgFrame !== currentImageIndex) {
+          currentImageIndex = avgFrame;
+          updateDisplay();
+        }
+      });
+
+      function updateViewer() {
+        if (images.length === 0) return;
+
+        viewerContainer.innerHTML = "";
+
+        const imageViewer = document.createElement("div");
+        imageViewer.className = "image-viewer";
+
+        // Create two image layers for crossfading
+        const img1 = document.createElement("img");
+        img1.src = images[currentImageIndex].src;
+        img1.className = "rotating-image active";
+        img1.alt = `Frame ${currentImageIndex + 1}`;
+
+        const img2 = document.createElement("img");
+        img2.src = images[currentImageIndex].src;
+        img2.className = "rotating-image";
+        img2.alt = `Frame ${currentImageIndex + 1}`;
+
+        // Create two overlay image layers for crossfading
+        const overlay1 = document.createElement("img");
+        overlay1.src = overlayImages[currentImageIndex] ? overlayImages[currentImageIndex].src : "https://assets.codepen.io/948509/animation-hand-object-01.png";
+        overlay1.className = "static-overlay active-overlay";
+        overlay1.alt = "Overlay";
+
+        const overlay2 = document.createElement("img");
+        overlay2.src = overlayImages[currentImageIndex] ? overlayImages[currentImageIndex].src : "https://assets.codepen.io/948509/animation-hand-object-01.png";
+        overlay2.className = "static-overlay";
+        overlay2.alt = "Overlay";
+
+        const frameCounter = document.createElement("div");
+        frameCounter.className = "frame-counter";
+        frameCounter.textContent = `${currentImageIndex + 1}/${images.length}`;
+
+        imageViewer.appendChild(img1);
+        imageViewer.appendChild(img2);
+        imageViewer.appendChild(overlay1);
+        imageViewer.appendChild(overlay2);
+        imageViewer.appendChild(frameCounter);
+        viewerContainer.appendChild(imageViewer);
+      }
+
+      function updateDisplay() {
+        if (images.length === 0) return;
+
+        const imageElements = viewerContainer.querySelectorAll(".rotating-image");
+        const overlayElements = viewerContainer.querySelectorAll(".static-overlay");
+        const counter = viewerContainer.querySelector(".frame-counter");
+
+        // Update background images
+        if (imageElements.length >= 2 && images[currentImageIndex]) {
+          const activeImg = Array.from(imageElements).find(img => img.classList.contains("active"));
+          const inactiveImg = Array.from(imageElements).find(img => !img.classList.contains("active"));
+
+          if (activeImg && inactiveImg) {
+            inactiveImg.src = images[currentImageIndex].src;
+            inactiveImg.alt = `Frame ${currentImageIndex + 1}`;
+            activeImg.classList.remove("active");
+            inactiveImg.classList.add("active");
+          }
+        }
+
+        // Update overlay images
+        if (overlayElements.length >= 2 && overlayImages.length > 0 && overlayImages[currentImageIndex]) {
+          const activeOverlay = Array.from(overlayElements).find(img => img.classList.contains("active-overlay"));
+          const inactiveOverlay = Array.from(overlayElements).find(img => !img.classList.contains("active-overlay"));
+
+          if (activeOverlay && inactiveOverlay) {
+            inactiveOverlay.src = overlayImages[currentImageIndex].src;
+            inactiveOverlay.alt = `Overlay ${currentImageIndex + 1}`;
+            activeOverlay.classList.remove("active-overlay");
+            inactiveOverlay.classList.add("active-overlay");
+          }
+        }
+
+        if (counter) {
+          counter.textContent = `${currentImageIndex + 1}/${images.length}`;
+        }
+      }
+
+      // Auto-load images from folder on page load
+      function autoLoadImages() {
+        const basePath = "https://assets.codepen.io/948509/animation-bg-";
+        const overlayBasePath = "https://assets.codepen.io/948509/animation-hand-object-";
+
+        const imagePromises = [];
+        const overlayPromises = [];
+
+        // Generate background image paths from 01.png to 14.png
+        for (let i = 1; i <= 14; i++) {
+          const paddedNumber = String(i).padStart(2, "0");
+          const imagePath = `${basePath}${paddedNumber}.png`;
+
+          const promise = new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = () => {
+              console.warn(`Failed to load: ${imagePath}`);
+              resolve(null);
+            };
+            img.src = imagePath;
+          });
+
+          imagePromises.push(promise);
+        }
+
+        // Generate overlay image paths from 01.png to 17.png
+        for (let i = 1; i <= 17; i++) {
+          const paddedNumber = String(i).padStart(2, "0");
+          const imagePath = `${overlayBasePath}${paddedNumber}.png`;
+
+          const promise = new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = () => {
+              console.warn(`Failed to load overlay: ${imagePath}`);
+              resolve(null);
+            };
+            img.src = imagePath;
+          });
+
+          overlayPromises.push(promise);
+        }
+
+        viewerContainer.classList.add("loading");
+
+        Promise.all([Promise.all(imagePromises), Promise.all(overlayPromises)]).then(([loadedImages, loadedOverlays]) => {
+          // Filter out any failed images
+          images = loadedImages.filter((img) => img !== null);
+          overlayImages = loadedOverlays.filter((img) => img !== null);
+
+          if (images.length > 0) {
+            currentImageIndex = 0;
+            frameBuffer = [];
+            updateViewer();
+            viewerContainer.classList.remove("loading");
+          } else {
+            viewerContainer.classList.remove("loading");
+            console.error(
+              "No images could be loaded from the specified folder"
+            );
+          }
+        });
+      }
+
+      // Initialize and auto-load images
+      autoLoadImages();
+    </script>
+  </body>
+</html>
