@@ -84,6 +84,18 @@
         opacity: 1;
       }
 
+      .static-overlay {
+        position: absolute;
+        width: 50%;
+        height: 50%;
+        object-fit: contain;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 10;
+        pointer-events: none;
+      }
+
       .placeholder {
         display: flex;
         flex-direction: column;
@@ -205,12 +217,19 @@
         img2.className = "rotating-image";
         img2.alt = `Frame ${currentImageIndex + 1}`;
 
+        // Create static overlay image
+        const staticOverlay = document.createElement("img");
+        staticOverlay.src = "assets/img/animation-egg/object-eggs/01.png";
+        staticOverlay.className = "static-overlay";
+        staticOverlay.alt = "Static overlay";
+
         const frameCounter = document.createElement("div");
         frameCounter.className = "frame-counter";
         frameCounter.textContent = `${currentImageIndex + 1}/${images.length}`;
 
         imageViewer.appendChild(img1);
         imageViewer.appendChild(img2);
+        imageViewer.appendChild(staticOverlay);
         imageViewer.appendChild(frameCounter);
         viewerContainer.appendChild(imageViewer);
       }
