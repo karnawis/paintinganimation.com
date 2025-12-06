@@ -72,10 +72,16 @@
       }
 
       .rotating-image {
+        position: absolute;
         width: 100%;
         height: 100%;
         object-fit: contain;
-        transition: opacity 0.3s ease;
+        transition: opacity 0.5s ease-in-out;
+        opacity: 0;
+      }
+
+      .rotating-image.active {
+        opacity: 1;
       }
 
       .placeholder {
@@ -135,7 +141,7 @@
       let mouseX = 0;
       let lastMouseX = 0;
       let sensitivity = 1;
-      let smoothing = 5;
+      let smoothing = 6;
       let isMouseInViewer = false;
       let frameBuffer = [];
 
@@ -188,16 +194,23 @@
         const imageViewer = document.createElement("div");
         imageViewer.className = "image-viewer";
 
-        const img = document.createElement("img");
-        img.src = images[currentImageIndex].src;
-        img.className = "rotating-image";
-        img.alt = `Frame ${currentImageIndex + 1}`;
+        // Create two image layers for crossfading
+        const img1 = document.createElement("img");
+        img1.src = images[currentImageIndex].src;
+        img1.className = "rotating-image active";
+        img1.alt = `Frame ${currentImageIndex + 1}`;
+
+        const img2 = document.createElement("img");
+        img2.src = images[currentImageIndex].src;
+        img2.className = "rotating-image";
+        img2.alt = `Frame ${currentImageIndex + 1}`;
 
         const frameCounter = document.createElement("div");
         frameCounter.className = "frame-counter";
         frameCounter.textContent = `${currentImageIndex + 1}/${images.length}`;
 
-        imageViewer.appendChild(img);
+        imageViewer.appendChild(img1);
+        imageViewer.appendChild(img2);
         imageViewer.appendChild(frameCounter);
         viewerContainer.appendChild(imageViewer);
       }
@@ -205,12 +218,23 @@
       function updateDisplay() {
         if (images.length === 0) return;
 
-        const img = viewerContainer.querySelector(".rotating-image");
+        const imageElements = viewerContainer.querySelectorAll(".rotating-image");
         const counter = viewerContainer.querySelector(".frame-counter");
 
-        if (img && images[currentImageIndex]) {
-          img.src = images[currentImageIndex].src;
-          img.alt = `Frame ${currentImageIndex + 1}`;
+        if (imageElements.length >= 2 && images[currentImageIndex]) {
+          // Find which image is currently active
+          const activeImg = Array.from(imageElements).find(img => img.classList.contains("active"));
+          const inactiveImg = Array.from(imageElements).find(img => !img.classList.contains("active"));
+
+          if (activeImg && inactiveImg) {
+            // Update the inactive image with new source
+            inactiveImg.src = images[currentImageIndex].src;
+            inactiveImg.alt = `Frame ${currentImageIndex + 1}`;
+
+            // Crossfade: fade out active, fade in inactive
+            activeImg.classList.remove("active");
+            inactiveImg.classList.add("active");
+          }
         }
 
         if (counter) {
@@ -220,16 +244,14 @@
 
       // Auto-load images from folder on page load
       function autoLoadImages() {
-        const basePath =
-          // "assets/animation/2025-11-01-bg-cosmo-pink-mini/";
-          "https://assets.codepen.io/948509/";
+        const basePath = "assets/img/animation-egg/bg-cosmo-egg/";
 
         const imagePromises = [];
 
-        // Generate image paths from _2025-11-01_06 to _2025-11-01_32
-        for (let i = 1; i <= 32; i++) {
-          const paddedNumber = String(i).padStart(3, "0");
-          const imagePath = `${basePath}_2025-11-01_${paddedNumber}-small.jpeg`;
+        // Generate image paths from 01.png to 12.png
+        for (let i = 1; i <= 12; i++) {
+          const paddedNumber = String(i).padStart(2, "0");
+          const imagePath = `${basePath}${paddedNumber}.png`;
 
           const promise = new Promise((resolve, reject) => {
             const img = new Image();
