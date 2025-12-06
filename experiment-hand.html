@@ -224,12 +224,12 @@
 
         // Create two overlay image layers for crossfading
         const overlay1 = document.createElement("img");
-        overlay1.src = overlayImages[currentImageIndex] ? overlayImages[currentImageIndex].src : "assets/img/animation-egg/object-eggs/01.png";
+        overlay1.src = overlayImages[currentImageIndex] ? overlayImages[currentImageIndex].src : "assets/img/animation-hand/object-hand/01.png";
         overlay1.className = "static-overlay active-overlay";
         overlay1.alt = "Overlay";
 
         const overlay2 = document.createElement("img");
-        overlay2.src = overlayImages[currentImageIndex] ? overlayImages[currentImageIndex].src : "assets/img/animation-egg/object-eggs/01.png";
+        overlay2.src = overlayImages[currentImageIndex] ? overlayImages[currentImageIndex].src : "assets/img/animation-hand/object-hand/01.png";
         overlay2.className = "static-overlay";
         overlay2.alt = "Overlay";
 
@@ -285,14 +285,14 @@
 
       // Auto-load images from folder on page load
       function autoLoadImages() {
-        const basePath = "assets/img/animation-egg/bg-cosmo-egg/";
-        const overlayBasePath = "assets/img/animation-egg/object-eggs/";
+        const basePath = "assets/img/animation-hand/bg-cosmo/";
+        const overlayBasePath = "assets/img/animation-hand/object-hand/";
 
         const imagePromises = [];
         const overlayPromises = [];
 
         // Generate background image paths from 01.png to 12.png
-        for (let i = 1; i <= 12; i++) {
+        for (let i = 1; i <= 14; i++) {
           const paddedNumber = String(i).padStart(2, "0");
           const imagePath = `${basePath}${paddedNumber}.png`;
 
@@ -310,7 +310,7 @@
         }
 
         // Generate overlay image paths from 01.png to 21.png
-        for (let i = 1; i <= 21; i++) {
+        for (let i = 1; i <= 17; i++) {
           const paddedNumber = String(i).padStart(2, "0");
           const imagePath = `${overlayBasePath}${paddedNumber}.png`;
 
